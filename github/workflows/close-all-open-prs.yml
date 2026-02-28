@@ -1,0 +1,63 @@
+name: Close all open PRs
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "If true, only log PRs that would be closed."
+        required: true
+        default: "true"
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: close-all-open-prs
+  cancel-in-progress: false
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close all open PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const dryRun = (core.getInput('dry_run') || 'true').toLowerCase() === 'true';
+            core.info(`Repo: ${owner}/${repo}`);
+            core.info(`Dry run: ${dryRun}`);
+
+            // Paginate through open PRs
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            core.info(`Found ${pulls.length} open PR(s).`);
+
+            for (const pr of pulls) {
+              const prNumber = pr.number;
+              const title = pr.title;
+
+              if (dryRun) {
+                core.info(`[DRY RUN] Would close PR #${prNumber}: ${title}`);
+                continue;
+              }
+
+              core.info(`Closing PR #${prNumber}: ${title}`);
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: prNumber,
+                state: 'closed',
+              });
+            }
+
+            core.info(`Done.`);
