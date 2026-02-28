@@ -28,7 +28,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            const dryRun = (core.getInput('dry_run') || 'true').toLowerCase() === 'true';
+            const dryRun = core.getInput('dry_run').toLowerCase() === 'true';
             core.info(`Repo: ${owner}/${repo}`);
             core.info(`Dry run: ${dryRun}`);
 
